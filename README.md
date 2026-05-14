@@ -1,6 +1,11 @@
 # Cervecería Agus
 
-ERP vertical de microcervecería + tienda online. Stack: Laravel 11 + Filament 3 + Livewire + PostgreSQL + Redis.
+ERP vertical de microcervecería + tienda online. Stack: Laravel 11 + Filament 3 + Livewire + MySQL 8.
+
+> **Nota de stack:** el spec original fija PostgreSQL + Redis + Meilisearch, pero el
+> hosting de producción es shared PHP hosting (solo MySQL, sin Redis/Supervisor).
+> El stack real se ajustó a MySQL + drivers `database` para cache/queue/session.
+> Detalle y justificación en [`DECISIONS.md`](./DECISIONS.md) (entrada 2026-05-14).
 
 Spec completo: [`spec_software_cerveceria_agus.md`](./spec_software_cerveceria_agus.md).
 Progreso: [`PROGRESS.md`](./PROGRESS.md) · Decisiones: [`DECISIONS.md`](./DECISIONS.md).
@@ -12,7 +17,7 @@ beerepo/
 ├── apps/
 │   └── admin/          # Backoffice Laravel 11 + Filament 3 (Fase 0)
 │       (apps/tienda y apps/reparto se crearán en Fases 1 y 2)
-├── docker-compose.yml  # Postgres 16 + Redis 7 + Meilisearch
+├── docker-compose.yml  # MySQL 8 (mismo motor que producción)
 ├── PROGRESS.md
 ├── DECISIONS.md
 └── spec_software_cerveceria_agus.md
@@ -20,10 +25,10 @@ beerepo/
 
 ## Setup local
 
-Requisitos: PHP 8.3+, Composer 2, Docker, Node 20+.
+Requisitos: PHP 8.2+, Composer 2, Docker, Node 20+.
 
 ```bash
-# 1. Levantar servicios
+# 1. Levantar MySQL
 docker compose up -d
 
 # 2. Setup app admin
@@ -36,6 +41,22 @@ php artisan serve
 ```
 
 El backoffice queda en `http://localhost:8000/admin`.
+
+## Deploy a producción (shared hosting, vía SSH)
+
+```bash
+git pull
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+Cron del hosting (cada minuto):
+
+```cron
+* * * * * cd /ruta/apps/admin && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /ruta/apps/admin && php artisan queue:work --stop-when-empty --max-time=55 >> /dev/null 2>&1
+```
 
 ### Crear primer usuario admin
 

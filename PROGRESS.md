@@ -30,7 +30,27 @@ Tracking de avance por fase según `spec_software_cerveceria_agus.md`.
 
 ## Fase 1 — MVP Comercial (LANZAMIENTO)
 
-Pendiente. Ver sección 6.1 del spec.
+### Modelo de datos (PROMPT 2) — hecho
+
+- [x] Enums: SubscriptionStatus, OrderStatus, OrderSource, CouponType, CouponApplicableTo, CustomerSource
+- [x] Migrations + modelos: Customer, Address, Plan, Subscription, SubscriptionBox, Product, Order, OrderItem, Coupon
+- [x] Customer como modelo autenticable propio + guard `customer` separado del admin (ver DECISIONS.md)
+- [x] Factories para los 9 modelos (con states: premium/basic, guest/paid, paused/cancelled, etc.)
+- [x] Feature tests de creación + relaciones (19 tests, verde en sqlite)
+- [x] DatabaseSeeder: admin `agus@agus.club` + planes Premium y Básico
+- [x] FKs a Batch/Recipe/Delivery dejadas como columnas nullable sin constraint (son de Fase 2)
+
+### Pendiente Fase 1
+
+- [ ] PROMPT 1 ya cubierto en Fase 0
+- [ ] PROMPT 3: integración Mercado Pago — pago único
+- [ ] PROMPT 4: integración Mercado Pago — suscripciones recurrentes
+- [ ] PROMPT 5: resources Filament (Order, Subscription, Customer, Product, Coupon) + widgets KPI
+- [ ] PROMPT 6: tienda pública (Livewire + Tailwind)
+- [ ] PROMPT 7: pre-venta / lista de espera
+- [ ] PROMPT 8: emails transaccionales
+- [ ] Auth de clientes (registro/login con guard `customer`) y login admin
+- [ ] Legal: términos, privacidad (Ley 18.331), envíos
 
 ## Fase 2 — Operaciones
 

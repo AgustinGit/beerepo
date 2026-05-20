@@ -119,3 +119,37 @@ Por qué: 8.2 es el mínimo confirmado del hosting y el mínimo de Laravel 11. C
 Decisión: el `docker-compose.yml` de dev levanta exactamente lo que hay en prod (MySQL 8) y nada más. Los tests en CI corren contra MySQL real, no sqlite.
 
 Por qué: el objetivo declarado es que algo que anda en dev ande en prod. Sin Redis ni Meilisearch en dev, no hay forma de depender accidentalmente de ellos.
+
+## 2026-05-20 — Fase 1: modelo de datos
+
+### Customer como modelo propio + guard `customer` separado — interpreta "Customer extends User"
+
+Decisión: `User` queda solo para Agus (admin/Filament). `Customer` es un modelo autenticable propio (`customers` table) con su propio guard `customer` y broker de password. Los socios de la tienda no comparten tabla ni login con el admin.
+
+Por qué: el spec dice "Customer extends User" pero también "login admin separado". Guards separados respeta lo segundo, evita que un socio pueda tocar el backoffice, y es coherente con `User::canAccessPanel` (restringido a `@agus.club`). El checkout invitado se soporta con `orders.customer_id` nullable.
+
+Alternativa descartada: tabla `users` única para todos + `customers` 1:1. Mezclaba admin y clientes en un mismo login.
+
+### FKs a entidades de Fase 2 como columnas nullable sin constraint
+
+Decisión: `products.recipe_id`, `orders.delivery_id`, `subscription_boxes.delivery_id`, `order_items.batch_id` y `customers.default_address_id` se crean como `unsignedBigInteger` nullable SIN foreign key a nivel DB.
+
+Por qué: Recipe, Batch y Delivery son de Fase 2 (sus tablas no existen aún). `default_address_id` es una referencia circular (customers ↔ addresses). Se valida a nivel aplicación; el constraint DB puede agregarse después si hace falta.
+
+### Orden de migraciones ajustado manualmente
+
+Decisión: se renombraron los timestamps de `subscription_boxes` y `order_items` para que corran después de `subscriptions` y `orders` respectivamente (Laravel ejecuta migraciones por orden alfabético de filename).
+
+Por qué: ambas dependen de tablas que alfabéticamente venían después. Sin el ajuste, el `constrained()` fallaba.
+
+### Money como `decimal` con cast `decimal:2`
+
+Decisión: todos los montos usan `decimal(10,2)` / `decimal(12,2)` y cast `decimal:2` en el modelo (devuelve string, no float).
+
+Por qué: evita errores de redondeo de floats en plata. Los tests castean a `(float)` solo para comparar.
+
+### Tests con `RefreshDatabase`; sqlite in-memory en local, MySQL en CI
+
+Decisión: los feature tests usan `RefreshDatabase`. En CI corren contra MySQL real (paridad). En local se puede usar sqlite in-memory para velocidad (`DB_CONNECTION=sqlite DB_DATABASE=:memory:`).
+
+Por qué: las migraciones default y las de Fase 1 son agnósticas de motor; sqlite acelera el loop local y MySQL en CI cubre la paridad real.
